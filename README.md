@@ -33,19 +33,7 @@ Although biometric tracking sensors have already been around for some time, crea
 
 ## Demo Video <a name="demo-video"></a>
 
-Summary, Situational Analysis and Key issues
-Analyse the given problem statement, including a situational analysis and key
-issues your team is targeting.
-
-
-b. Strategy and Recommendations
-Clear explanation of the justification and direct impact of solution, including
-how coding and IBM Cloud is used in the solution.
-c. Implementation and Plan of Action
-Explain how your team will feasibly implement the solution, including possible
-challenges and mitigation strategies.
-d. Conclusion
-Final summary of how your solution directly responds to the problem statement.
+https://youtu.be/NkYlpIksUN0
 
 ## The Architecture <a name="the-architecture"></a>
 
