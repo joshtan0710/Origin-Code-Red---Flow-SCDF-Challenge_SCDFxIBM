@@ -49,7 +49,7 @@ Final summary of how your solution directly responds to the problem statement.
 
 ## The Architecture <a name="the-architecture"></a>
 
-![Title](Images/Roadmap.png)
+![Title](Images/Archi.png)
 
 <br>
 1: Device receive inputs from user <br>
