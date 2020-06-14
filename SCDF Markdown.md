@@ -49,7 +49,7 @@ Final summary of how your solution directly responds to the problem statement.
 
 ## The Architecture <a name="the-architecture"></a>
 
-![Title](SCDF/Archi.png)
+![Title](Images/Archi.png)
 
 <br>
 1: Device receive inputs from user <br>
@@ -66,7 +66,7 @@ Final summary of how your solution directly responds to the problem statement.
 
 ## Project Roadmap<a name="project-roadmap"></a>
 
-![Title](SCDF/Roadmap.png)
+![Title](Images/Roadmap.png)
 
 
 ```python
