@@ -99,9 +99,9 @@ We take the individual's heart rate, body temperature and ambient temperature an
 
 The scoring is as follows: 
 
-[3-5] : Overall Green Status <br>
-[6-7]: Overall Yellow Status <br>
-[8-9]: Overall Red Status 
+[3-4] : Overall Green Status <br>
+[5-6]: Overall Yellow Status <br>
+[7-9]: Overall Red Status 
 
 
 If no heart rate and body temperature is detected, the output will throw a device error and idle.
