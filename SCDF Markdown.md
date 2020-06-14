@@ -27,7 +27,7 @@ There is a lack of tools to measure comprehensive personnel and equipment status
 Technology in the form of sensors can provide record and relay biometrics and equipment information in real time to a central database. These data passes through an algorithm to eventually provide a holistic assessment of the user's safety. The user or the officer in charge is able to make a more informed decision on the plan going forward to maximize safety, health and performance. 
 
 
-### The idea
+### The Idea
 
 Although biometric tracking sensors have already been around for some time, creating a set of open source tools, backed by the Node-Red platform and DashDB augments the level of insight we can glean from the existing sensor data. 
 
@@ -49,7 +49,7 @@ Final summary of how your solution directly responds to the problem statement.
 
 ## The Architecture <a name="the-architecture"></a>
 
-![Title](Images/Roadmap.png)
+![Title](Images/Archi.png)
 
 <br>
 1: Device receive inputs from user <br>
@@ -66,7 +66,7 @@ Final summary of how your solution directly responds to the problem statement.
 
 ## Project Roadmap<a name="project-roadmap"></a>
 
-![Title](SCDF/Roadmap.png)
+![Title](Images/Roadmap.png)
 
 ## Getting Started <a name ="getting-started"></a>
 
