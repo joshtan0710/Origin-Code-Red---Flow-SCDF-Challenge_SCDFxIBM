@@ -1,0 +1,989 @@
+[
+    {
+        "id": "763a9302.78702c",
+        "type": "tab",
+        "label": "Flow SCDF Challenge",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "44e3b4e4.e5cf7c",
+        "type": "cloudant",
+        "z": "",
+        "host": "9f2f86fd-d695-4a65-84e1-d3a1bddc4a39-bluemix.cloudantnosqldb.appdomain.cloud",
+        "name": "IBM Access"
+    },
+    {
+        "id": "264a495c.f53ae6",
+        "type": "dashDB",
+        "z": "",
+        "hostname": "dashdb-txn-sbox-yp-dal09-11.services.dal.bluemix.net",
+        "db": "BLUDB",
+        "port": "50000",
+        "name": ""
+    },
+    {
+        "id": "c0389726.b798c8",
+        "type": "function",
+        "z": "763a9302.78702c",
+        "name": "Output Humidity; Temp",
+        "func": "// Wet Bulb Global Temperature Measure\n// If weather falls within certain category, return integers 0-n\n// Fixed for Weather Station 44 - Nanyang Avenue (Near Civil Defence Academy)\nmsg.payload = {hm: msg.payload.humidity.items[0].readings[3].value, tp: msg.payload.airtemp.items[0].readings[3].value};\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 1140,
+        "y": 580,
+        "wires": [
+            [
+                "d6ec5f0d.81832"
+            ]
+        ]
+    },
+    {
+        "id": "4a586344.7a26dc",
+        "type": "function",
+        "z": "763a9302.78702c",
+        "name": "Temp Risk Algorithm",
+        "func": "var wbgt = msg.payload.wbgt;\nvar avgTemp = msg.payload.avgTemp;\nvar curTemp = msg.payload.currentTemp;\n\n// START ALGO FOR BODY TEMP STATUS\nvar heatload = '';\nvar heatload_int = 0;\nif (curTemp > (1.06*avgTemp)) {\n        heatload = 'red'; // returns 3 for heatstroke\n        heatload_int = 3;\n    } \n    else if (curTemp <= (1.06*avgTemp) && curTemp > avgTemp) {\n        heatload = 'yellow'; // returns 2 for elevated temp\n        heatload_int = 2;    \n    }\n    else if (curTemp <= avgTemp) {\n        heatload = 'green'; // returns 1 for below average temperature\n        heatload_int = 1;\n    }\n    else if (curTemp == 0) {\n        heatload = 'white';\n        heatload_int = 0;\n    }\n// END ALGO FOR BODY TEMP STATUS\n\n\n// START ALGO FOR HEAT INDEX\nvar wbgtinF = wbgt.tp * (9/5) + 32;\nvar C1 = -42.379;\nvar C2 = 2.04901523;\nvar C3 = 10.14333127;\nvar C4 = -0.22475541;\nvar C5 = -.00683783;\nvar C6 = -5.481717E-2;\nvar C7 = 1.22874E-3;\nvar C8 = 8.5282E-4;\nvar C9 = -1.99E-6;\nvar T = wbgtinF;\nvar R = wbgt.hm;\nvar T2 = wbgtinF * wbgtinF;\nvar R2 = wbgt.hm * wbgt.hm;\n\n// Heat Index Formula:\nvar HI = C1 + (C2 * T) + (C3 * R) + (C4 * T * R) + (C5 * T2) + (C6 * R2) + (C7 * T2 * R) + (C8 * T * R2) + (C9 * T2 * R2);\n\nvar indexload = '';\nvar indexload_int = 0;\nif (HI >= 131) {\n    indexload = 'red'; // returns red if heat index is more than 121\n    indexload_int = 3;\n    }\n    else if ((HI < 131) && (HI > 105)) {\n        indexload ='yellow';\n    indexload_int = 2;\n    }\n    else if (HI <= 105) {\n        indexload = 'green';\n    indexload_int = 1;\n    }\n// END ALGO FOR HEAT INDEX\n\nmsg.payload = {BodyTemp_Colour: heatload,\n    BodyTemp_Index: heatload_int,\n    HeatIndex_Colour: indexload,\n    HeatIndex_Index: indexload_int,\n    CurrentBodyTemp: curTemp,\n    CurrentHeat: wbgt.tp,\n    CurrentHumidity: wbgt.hm,\n    CurrentHeadIndex: HI};\n    \nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 1140,
+        "y": 420,
+        "wires": [
+            [
+                "a8418cf2.d8c8f"
+            ]
+        ]
+    },
+    {
+        "id": "500e81cd.c8cac",
+        "type": "function",
+        "z": "763a9302.78702c",
+        "name": "HR Risk Algorithm",
+        "func": "var hr = msg.payload.CurrentHR;\nvar hr_max = msg.payload.maxHR;\n\nvar ZoneCode = '';\nvar ZoneCode_Int = 0;\n\n// https://www.healthline.com/health/athlete-heart-rate#ideal-exercising-rate\n// Athletes train between 50% to 70% of their maximum heart rate\n\nvar zone1 = 0.5 * hr_max;\nvar zone2 = 0.7 * hr_max;\n\nif (hr <= zone1) {\n    ZoneCode = 'green';\n    ZoneCode_Int = 1;}\nelse if (hr > zone1 && hr <= zone2) { \n    ZoneCode = 'yellow';\n    ZoneCode_Int = 2;}\nelse if (hr == 0) { \n    ZoneCode = 'white';\n    ZoneCode_Int = 0;}\nelse {\n    ZoneCode = 'red';\n    ZoneCode_Int = 3;}\n\nmsg.payload = {ZoneCode: ZoneCode, ZoneCode_Index: ZoneCode_Int, CurrentHeartRate: hr, MaxHeartRate: hr_max};\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 1130,
+        "y": 800,
+        "wires": [
+            [
+                "a30a11fb.37cc7",
+                "f0eef0b0.b159"
+            ]
+        ]
+    },
+    {
+        "id": "34209153.bb871e",
+        "type": "debug",
+        "z": "763a9302.78702c",
+        "name": "Output to Trainer Device",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "x": 2210,
+        "y": 960,
+        "wires": []
+    },
+    {
+        "id": "3039aea8.fedea2",
+        "type": "http request",
+        "z": "763a9302.78702c",
+        "name": "GET Air Temp",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": false,
+        "url": "https://api.data.gov.sg/v1/environment/air-temperature",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "authType": "",
+        "x": 540,
+        "y": 620,
+        "wires": [
+            [
+                "260bc0ad.d6208"
+            ]
+        ]
+    },
+    {
+        "id": "44c55baf.70e5f4",
+        "type": "http request",
+        "z": "763a9302.78702c",
+        "name": "GET Humidity",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": false,
+        "url": "https://api.data.gov.sg/v1/environment/relative-humidity",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "authType": "",
+        "x": 540,
+        "y": 580,
+        "wires": [
+            [
+                "2abba66c.c3566a"
+            ]
+        ]
+    },
+    {
+        "id": "2abba66c.c3566a",
+        "type": "change",
+        "z": "763a9302.78702c",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "topic",
+                "pt": "msg",
+                "to": "humidity",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 750,
+        "y": 580,
+        "wires": [
+            [
+                "79824d57.3baba4"
+            ]
+        ]
+    },
+    {
+        "id": "260bc0ad.d6208",
+        "type": "change",
+        "z": "763a9302.78702c",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "topic",
+                "pt": "msg",
+                "to": "airtemp",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 750,
+        "y": 620,
+        "wires": [
+            [
+                "79824d57.3baba4"
+            ]
+        ]
+    },
+    {
+        "id": "79824d57.3baba4",
+        "type": "join",
+        "z": "763a9302.78702c",
+        "name": "",
+        "mode": "custom",
+        "build": "object",
+        "property": "payload",
+        "propertyType": "msg",
+        "key": "topic",
+        "joiner": "\\n",
+        "joinerType": "str",
+        "accumulate": false,
+        "timeout": "",
+        "count": "2",
+        "reduceRight": false,
+        "reduceExp": "",
+        "reduceInit": "",
+        "reduceInitType": "",
+        "reduceFixup": "",
+        "x": 950,
+        "y": 580,
+        "wires": [
+            [
+                "c0389726.b798c8"
+            ]
+        ]
+    },
+    {
+        "id": "f78c1cab.c83ef",
+        "type": "dashDB out",
+        "z": "763a9302.78702c",
+        "dashDB": "264a495c.f53ae6",
+        "service": "_ext_",
+        "table": "TEMPERATURE",
+        "name": "Temperature DB",
+        "x": 760,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "c6646aec.b8a618",
+        "type": "function",
+        "z": "763a9302.78702c",
+        "name": "Insert to DashDB",
+        "func": "temp = msg.payload;\n\n// modify payload to insert to database\nmsg.payload =\n{\n    RECORD: temp\n}\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 550,
+        "y": 380,
+        "wires": [
+            [
+                "f78c1cab.c83ef"
+            ]
+        ]
+    },
+    {
+        "id": "fae23392.8a85e",
+        "type": "dashDB in",
+        "z": "763a9302.78702c",
+        "dashDB": "264a495c.f53ae6",
+        "service": "_ext_",
+        "query": "SELECT DISTINCT RECORD\n  FROM DSJ01687.TEMPERATURE;",
+        "params": "",
+        "name": "Get All Temperature",
+        "x": 550,
+        "y": 420,
+        "wires": [
+            [
+                "30836285.af540e"
+            ]
+        ]
+    },
+    {
+        "id": "30836285.af540e",
+        "type": "function",
+        "z": "763a9302.78702c",
+        "name": "Get Average from DB",
+        "func": "\nvar totalTemp = 0;\nvar count = 0;\n\nfor (i in msg.payload) {\n    temp = msg.payload[i].RECORD;\n    count = count + 1;\n    totalTemp = totalTemp  + temp;\n}\n\nvar avg = totalTemp / count;\nmsg.payload = avg;\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 780,
+        "y": 420,
+        "wires": [
+            [
+                "826af2ea.75cb8"
+            ]
+        ]
+    },
+    {
+        "id": "2932236c.cc919c",
+        "type": "comment",
+        "z": "763a9302.78702c",
+        "name": "Progress 100%",
+        "info": "Managed to take the temperature input and store on database.",
+        "x": 760,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "a4960909.729c88",
+        "type": "comment",
+        "z": "763a9302.78702c",
+        "name": "Progress 100%",
+        "info": "Manage to get the combined data info for temperature and humidity based on Station 44: Nanyang Avenue (closest to Civil Defence Academy Jalan Bahar)",
+        "x": 1120,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "518fd012.50d28",
+        "type": "comment",
+        "z": "763a9302.78702c",
+        "name": "Progress 95%",
+        "info": "Algorithm for individual indexes done. Just to re-tune the numbers.",
+        "x": 1110,
+        "y": 460,
+        "wires": []
+    },
+    {
+        "id": "f20719a.d3850e8",
+        "type": "join",
+        "z": "763a9302.78702c",
+        "name": "",
+        "mode": "custom",
+        "build": "object",
+        "property": "payload",
+        "propertyType": "msg",
+        "key": "topic",
+        "joiner": "\\n",
+        "joinerType": "str",
+        "accumulate": false,
+        "timeout": "",
+        "count": "3",
+        "reduceRight": false,
+        "reduceExp": "",
+        "reduceInit": "",
+        "reduceInitType": "",
+        "reduceFixup": "",
+        "x": 950,
+        "y": 420,
+        "wires": [
+            [
+                "4a586344.7a26dc"
+            ]
+        ]
+    },
+    {
+        "id": "3c807524.9b993a",
+        "type": "change",
+        "z": "763a9302.78702c",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "topic",
+                "pt": "msg",
+                "to": "currentTemp",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 530,
+        "y": 460,
+        "wires": [
+            [
+                "f20719a.d3850e8"
+            ]
+        ]
+    },
+    {
+        "id": "826af2ea.75cb8",
+        "type": "change",
+        "z": "763a9302.78702c",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "topic",
+                "pt": "msg",
+                "to": "avgTemp",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 750,
+        "y": 460,
+        "wires": [
+            [
+                "f20719a.d3850e8"
+            ]
+        ]
+    },
+    {
+        "id": "d6ec5f0d.81832",
+        "type": "change",
+        "z": "763a9302.78702c",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "topic",
+                "pt": "msg",
+                "to": "wbgt",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 1110,
+        "y": 540,
+        "wires": [
+            [
+                "f20719a.d3850e8"
+            ]
+        ]
+    },
+    {
+        "id": "a8418cf2.d8c8f",
+        "type": "change",
+        "z": "763a9302.78702c",
+        "name": "Delete Sub-Payloads",
+        "rules": [
+            {
+                "t": "delete",
+                "p": "payload.wbgt",
+                "pt": "msg"
+            },
+            {
+                "t": "delete",
+                "p": "payload.avgTemp",
+                "pt": "msg"
+            },
+            {
+                "t": "delete",
+                "p": "payload.currentTemp",
+                "pt": "msg"
+            },
+            {
+                "t": "set",
+                "p": "topic",
+                "pt": "msg",
+                "to": "TempRiskAlgo",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 1380,
+        "y": 420,
+        "wires": [
+            [
+                "e9e6413e.39519"
+            ]
+        ]
+    },
+    {
+        "id": "19ccc5d7.6dd9ea",
+        "type": "function",
+        "z": "763a9302.78702c",
+        "name": "Insert to DashDB",
+        "func": "HR = msg.payload;\n\n// modify payload to insert to database\nmsg.payload =\n{\n    RECORD: HR\n}\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 550,
+        "y": 760,
+        "wires": [
+            [
+                "2cffda40.e03f06"
+            ]
+        ]
+    },
+    {
+        "id": "1c77791f.341ec7",
+        "type": "dashDB in",
+        "z": "763a9302.78702c",
+        "dashDB": "264a495c.f53ae6",
+        "service": "_ext_",
+        "query": "SELECT DISTINCT RECORD\n  FROM DSJ01687.HEARTRATE;",
+        "params": "",
+        "name": "Get All HR",
+        "x": 530,
+        "y": 800,
+        "wires": [
+            [
+                "77a82aa6.3c2574"
+            ]
+        ]
+    },
+    {
+        "id": "2cffda40.e03f06",
+        "type": "dashDB out",
+        "z": "763a9302.78702c",
+        "dashDB": "264a495c.f53ae6",
+        "service": "_ext_",
+        "table": "HEARTRATE",
+        "name": "HR DB",
+        "x": 740,
+        "y": 760,
+        "wires": []
+    },
+    {
+        "id": "77a82aa6.3c2574",
+        "type": "function",
+        "z": "763a9302.78702c",
+        "name": "Get Highest from DB",
+        "func": "\nvar maxHR = 0;\n\nfor (i in msg.payload) {\n    temp = msg.payload[i].RECORD;\n    if (temp > maxHR) {\n        maxHR = temp;\n    }\n}\n\nmsg.payload = maxHR;\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 780,
+        "y": 800,
+        "wires": [
+            [
+                "db288fee.4a4d1"
+            ]
+        ]
+    },
+    {
+        "id": "bac87a16.223a38",
+        "type": "change",
+        "z": "763a9302.78702c",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "topic",
+                "pt": "msg",
+                "to": "CurrentHR",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 530,
+        "y": 840,
+        "wires": [
+            [
+                "704c7afb.7eb534"
+            ]
+        ]
+    },
+    {
+        "id": "db288fee.4a4d1",
+        "type": "change",
+        "z": "763a9302.78702c",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "topic",
+                "pt": "msg",
+                "to": "maxHR",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 750,
+        "y": 840,
+        "wires": [
+            [
+                "704c7afb.7eb534"
+            ]
+        ]
+    },
+    {
+        "id": "704c7afb.7eb534",
+        "type": "join",
+        "z": "763a9302.78702c",
+        "name": "",
+        "mode": "custom",
+        "build": "object",
+        "property": "payload",
+        "propertyType": "msg",
+        "key": "topic",
+        "joiner": "\\n",
+        "joinerType": "str",
+        "accumulate": false,
+        "timeout": "",
+        "count": "2",
+        "reduceRight": false,
+        "reduceExp": "",
+        "reduceInit": "",
+        "reduceInitType": "",
+        "reduceFixup": "",
+        "x": 960,
+        "y": 800,
+        "wires": [
+            [
+                "500e81cd.c8cac"
+            ]
+        ]
+    },
+    {
+        "id": "a30a11fb.37cc7",
+        "type": "change",
+        "z": "763a9302.78702c",
+        "name": "Delete Sub-Payloads",
+        "rules": [
+            {
+                "t": "delete",
+                "p": "payload.CurrentHR",
+                "pt": "msg"
+            },
+            {
+                "t": "delete",
+                "p": "payload.avgHR",
+                "pt": "msg"
+            },
+            {
+                "t": "set",
+                "p": "topic",
+                "pt": "msg",
+                "to": "HRRiskAlgo",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 1380,
+        "y": 800,
+        "wires": [
+            [
+                "e9e6413e.39519"
+            ]
+        ]
+    },
+    {
+        "id": "c74d402e.387cd",
+        "type": "comment",
+        "z": "763a9302.78702c",
+        "name": "Progress 100%",
+        "info": "Managed to take the HR input and store on database.",
+        "x": 760,
+        "y": 720,
+        "wires": []
+    },
+    {
+        "id": "866ea993.eccd68",
+        "type": "comment",
+        "z": "763a9302.78702c",
+        "name": "Progress 90%",
+        "info": "Need to re adjust the numbers for the heart rate zones",
+        "x": 1110,
+        "y": 840,
+        "wires": []
+    },
+    {
+        "id": "e9e6413e.39519",
+        "type": "join",
+        "z": "763a9302.78702c",
+        "name": "",
+        "mode": "custom",
+        "build": "object",
+        "property": "payload",
+        "propertyType": "msg",
+        "key": "topic",
+        "joiner": "\\n",
+        "joinerType": "str",
+        "accumulate": false,
+        "timeout": "",
+        "count": "3",
+        "reduceRight": false,
+        "reduceExp": "",
+        "reduceInit": "",
+        "reduceInitType": "",
+        "reduceFixup": "",
+        "x": 1610,
+        "y": 1000,
+        "wires": [
+            [
+                "80d73adb.cc0d48"
+            ]
+        ]
+    },
+    {
+        "id": "7f3941b4.b1c7c",
+        "type": "function",
+        "z": "763a9302.78702c",
+        "name": "Algorithm to Trainer",
+        "func": "var TotalScore = msg.payload.TempRiskAlgo.BodyTemp_Index + msg.payload.TempRiskAlgo.HeatIndex_Index + msg.payload.HRRiskAlgo.ZoneCode_Index;\nvar FinalColor = '';\nvar Status = '';\n\n// 3 - 5 Green, 6 - 7 Yellow, 8 - 9 Red\nif (TotalScore <= 5) {FinalColor = 'Green';\n                        Status = 'Biometrics indicate overall safe levels.'}\nelse if (TotalScore > 5 && TotalScore <= 7) {FinalColor = 'Yellow';\n                        Status = 'Biometrics indicate overall elevated levels';}\nelse if (TotalScore > 7 && TotalScore <= 9) {FinalColor = 'Red';\n                        Status = 'Biometrics indicate overall safety risk.';}\n\nif (msg.payload.BA_Tank.BA_Index == 3) {FinalColor = 'Red';\n                    Status = Status + ' Breathing Apparatus Critical Level.';} // override final colour if red\n                    \nif (msg.payload.TempRiskAlgo.BodyTemp_Index == 3) {FinalColor = 'Red';\n                    Status = Status + ' Body Temperature Critical Level.';} // override final colour if red\n                    \nif (msg.payload.HRRiskAlgo.ZoneCode_Index == 3) {FinalColor = 'Red';\n                    Status = Status + ' Heart Rate Critical Level.';} // override final colour if red\n\nif (msg.payload.TempRiskAlgo.HeatIndex_Index == 3) {FinalColor = 'Red';\n                    Status = Status + ' Environment not favourable for training.';} // override final colour if red\n\n\nif (msg.payload.TempRiskAlgo.CurrentBodyTemp == 0) {msg.payload = {Status: 'Device Error - No Body Temperature Detected.'};}\n    else if (msg.payload.HRRiskAlgo.CurrentHeartRate == 0) {msg.payload = {Status: 'Device Error - No Heart Rate Detected.'};}\n    else {  msg.payload = \n            {Total_Safety_Score: TotalScore,\n            Score_Color: FinalColor,\n            Status: Status,\n            BA_Percent_Left: msg.payload.BA_Tank.BA_Percentage,\n            Current_Body_Temp: msg.payload.TempRiskAlgo.CurrentBodyTemp,\n            Current_Ambient_Heat: msg.payload.TempRiskAlgo.CurrentHeat,\n            Current_Humidity: msg.payload.TempRiskAlgo.CurrentHumidity,\n            Current_Heart_Rate: msg.payload.HRRiskAlgo.CurrentHeartRate,\n            Current_HR_Zone: msg.payload.HRRiskAlgo.ZoneCode};\n    }\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 1970,
+        "y": 960,
+        "wires": [
+            [
+                "34209153.bb871e"
+            ]
+        ]
+    },
+    {
+        "id": "cda0756.a65c688",
+        "type": "comment",
+        "z": "763a9302.78702c",
+        "name": "Use this to start everything simultaneously.",
+        "info": "",
+        "x": 180,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "80d73adb.cc0d48",
+        "type": "change",
+        "z": "763a9302.78702c",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "topic",
+                "pt": "msg",
+                "to": "AnalyzedRisk",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 1750,
+        "y": 1000,
+        "wires": [
+            [
+                "7f3941b4.b1c7c",
+                "db7b9ae2.8bcab8"
+            ]
+        ]
+    },
+    {
+        "id": "7228aa6d.b53074",
+        "type": "function",
+        "z": "763a9302.78702c",
+        "name": "Temperature Input",
+        "func": "msg.payload = 37.3;\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 250,
+        "y": 160,
+        "wires": [
+            [
+                "fae23392.8a85e",
+                "3c807524.9b993a"
+            ]
+        ]
+    },
+    {
+        "id": "a84f1cf4.dd4f9",
+        "type": "inject",
+        "z": "763a9302.78702c",
+        "name": "SIMULATE INPUT FROM WEARER",
+        "topic": "",
+        "payload": "",
+        "payloadType": "num",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "x": 200,
+        "y": 100,
+        "wires": [
+            [
+                "7228aa6d.b53074",
+                "6d9850d4.67c79",
+                "a7955c93.bf695",
+                "197b9210.89782e"
+            ]
+        ]
+    },
+    {
+        "id": "6d9850d4.67c79",
+        "type": "function",
+        "z": "763a9302.78702c",
+        "name": "Trigger API GETS",
+        "func": "\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 250,
+        "y": 200,
+        "wires": [
+            [
+                "44c55baf.70e5f4",
+                "3039aea8.fedea2"
+            ]
+        ]
+    },
+    {
+        "id": "a7955c93.bf695",
+        "type": "function",
+        "z": "763a9302.78702c",
+        "name": "Training Heart Rate Input",
+        "func": "msg.payload = 120;\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 230,
+        "y": 240,
+        "wires": [
+            [
+                "1c77791f.341ec7",
+                "bac87a16.223a38"
+            ]
+        ]
+    },
+    {
+        "id": "54461eb8.cf324",
+        "type": "debug",
+        "z": "763a9302.78702c",
+        "name": "Output to Wearer",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "x": 2190,
+        "y": 1040,
+        "wires": []
+    },
+    {
+        "id": "db7b9ae2.8bcab8",
+        "type": "function",
+        "z": "763a9302.78702c",
+        "name": "Algorithm to Wearer",
+        "func": "var TotalScore = msg.payload.TempRiskAlgo.BodyTemp_Index + msg.payload.TempRiskAlgo.HeatIndex_Index + msg.payload.HRRiskAlgo.ZoneCode_Index;\nvar FinalColor = '';\nvar Action = 'Nothing';\n\n// 3 - 5 Green, 6 - 7 Yellow, 8 - 9 Red\nif (TotalScore <= 7) {FinalColor = 'Green';\n                        Action = 'Do Nothing'}\nelse if (TotalScore > 7 && TotalScore <= 9) {FinalColor = 'Red';\n                        Action = 'Short Interval Vibrations';}\n\nif (msg.payload.BA_Tank.BA_Index == 3) {FinalColor = 'Red';\n                    Action = 'Long Interval Vibrations';} // override final colour if red\n\nif (msg.payload.TempRiskAlgo.CurrentBodyTemp == 0) {msg.payload = {Action_Color: 'Off', Action: 'Idle'};}\n    else if (msg.payload.HRRiskAlgo.CurrentHeartRate == 0) {msg.payload = {Action_Color: 'Off', Action: 'Idle'};}\n    else {msg.payload = {Action_Color: FinalColor,\n            Action: Action}\n        \n    }\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 1960,
+        "y": 1040,
+        "wires": [
+            [
+                "54461eb8.cf324"
+            ]
+        ]
+    },
+    {
+        "id": "650e02bb.a5e0ec",
+        "type": "function",
+        "z": "763a9302.78702c",
+        "name": "BA Percent Left",
+        "func": "var total = 30;\nvar current = msg.payload;\n\nvar percent = current / total * 100;\n\nvar BA_Color = '';\nvar BA_Index = 0;\nif (percent > 70) {\n        BA_Color = 'green';\n        BA_Index = 1;}\n    else if (percent <= 70 && percent > 25) {\n        BA_Color = 'yellow';\n        BA_Index = 2;}\n    else if (percent <= 25) {\n        BA_Color = 'red';\n        BA_Index = 3;\n    }\n\nmsg.payload = {BA_Color: BA_Color, BA_Index: BA_Index, BA_Current: current, BA_Percentage: percent};\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 540,
+        "y": 1000,
+        "wires": [
+            [
+                "c383805f.6dde5"
+            ]
+        ]
+    },
+    {
+        "id": "197b9210.89782e",
+        "type": "function",
+        "z": "763a9302.78702c",
+        "name": "BA Tank Input",
+        "func": "msg.payload = 5;\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 260,
+        "y": 280,
+        "wires": [
+            [
+                "650e02bb.a5e0ec"
+            ]
+        ]
+    },
+    {
+        "id": "dd20b373.43e79",
+        "type": "comment",
+        "z": "763a9302.78702c",
+        "name": "Flow for Temperature",
+        "info": "",
+        "x": 560,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "86a912a4.2da3d",
+        "type": "comment",
+        "z": "763a9302.78702c",
+        "name": "Flow for Weather",
+        "info": "",
+        "x": 540,
+        "y": 540,
+        "wires": []
+    },
+    {
+        "id": "30e0a528.43786a",
+        "type": "comment",
+        "z": "763a9302.78702c",
+        "name": "Flow for Heart Rate",
+        "info": "",
+        "x": 550,
+        "y": 720,
+        "wires": []
+    },
+    {
+        "id": "2ff811e2.6a5e5e",
+        "type": "comment",
+        "z": "763a9302.78702c",
+        "name": "Flow for BA Tank",
+        "info": "",
+        "x": 540,
+        "y": 960,
+        "wires": []
+    },
+    {
+        "id": "c383805f.6dde5",
+        "type": "change",
+        "z": "763a9302.78702c",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "topic",
+                "pt": "msg",
+                "to": "BA_Tank",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 750,
+        "y": 1000,
+        "wires": [
+            [
+                "e9e6413e.39519"
+            ]
+        ]
+    },
+    {
+        "id": "a47ae167.31233",
+        "type": "comment",
+        "z": "763a9302.78702c",
+        "name": "Data to Trainer's Device",
+        "info": "",
+        "x": 2200,
+        "y": 920,
+        "wires": []
+    },
+    {
+        "id": "c95769ba.df9208",
+        "type": "comment",
+        "z": "763a9302.78702c",
+        "name": "Data to Wearer's Device",
+        "info": "",
+        "x": 2210,
+        "y": 1080,
+        "wires": []
+    },
+    {
+        "id": "a975b75e.2f4c78",
+        "type": "debug",
+        "z": "763a9302.78702c",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "x": 750,
+        "y": 1040,
+        "wires": []
+    },
+    {
+        "id": "f0eef0b0.b159",
+        "type": "debug",
+        "z": "763a9302.78702c",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "x": 1330,
+        "y": 840,
+        "wires": []
+    }
+]
