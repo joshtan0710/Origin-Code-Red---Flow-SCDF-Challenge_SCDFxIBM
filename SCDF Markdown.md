@@ -113,7 +113,7 @@ If any of the metrics return an individual red status, the final safety score wi
 
 ## Project Roadmap<a name="project-roadmap"></a>
 
-![Title](SCDF/Roadmap.png)
+![Title](Images/Roadmap.png)
 
 ## Getting Started <a name ="getting-started"></a>
 
