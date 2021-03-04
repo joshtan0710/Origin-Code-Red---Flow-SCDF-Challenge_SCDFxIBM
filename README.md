@@ -149,7 +149,7 @@ Putra Syafiq bin Roslan <br>
 Low Hui Lin <br>
 Tan Zhi En, Joshua <br>
 Gabriel Hsu Kai Nan <br>
-Yvonne Teo Shi Ching 
+Teo Shi Ching, Yvonne
 
 ## Acknowledgments <a name= "acknowledgments"></a>
 
